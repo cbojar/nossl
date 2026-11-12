@@ -69,8 +69,6 @@ func parseProxyURL(context *gin.Context) (*url.URL, error) {
 		return nil, err
 	}
 
-	fmt.Printf("URL: %+v\n", toProxy)
-
 	return toProxy, nil
 }
 
