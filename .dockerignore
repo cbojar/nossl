@@ -1,0 +1,6 @@
+nossl
+README.md
+Dockerfile
+.devcontainer
+.git
+.gitignore
