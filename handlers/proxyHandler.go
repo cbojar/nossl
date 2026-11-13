@@ -3,10 +3,10 @@ package handlers
 import (
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/cbojar/nossl/fetcher"
+	"github.com/cbojar/nossl/relinker"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,64 +26,38 @@ func (handler *ProxyHandler) Handle(context *gin.Context) {
 	} else if response, err := handler.fetcher.Fetch("GET", toProxy, context.Request.Header); err != nil {
 		context.String(400, "%s", err)
 	} else {
+		proxier := relinker.NewURLProxier(buildProxyBase(context))
+		htmlRelinker := relinker.NewHTMLRelinker(proxier)
+		responseBody := htmlRelinker.Relink(toProxy, response.BodyString())
+
 		applyProxiedHeaders(response, context)
-
-		proxyBase, _ := url.Parse(fmt.Sprintf("http://%s/proxy", context.Request.Host))
-		responseBody := proxyLinkURLs(response.BodyString(), toProxy, proxyBase)
-
 		context.String(response.StatusCode(), "%s", responseBody)
 	}
 }
 
 func parseProxyURLQuery(context *gin.Context) (*url.URL, error) {
-	toProxyString, exists := context.GetQuery("url")
-	if !exists {
+	if queryURL, exists := context.GetQuery("url"); !exists {
 		return nil, fmt.Errorf("No URL supplied")
+	} else {
+		return parseProxyURL(queryURL)
 	}
-
-	return parseProxyURL(toProxyString)
 }
 
 func parseProxyURL(urlString string) (*url.URL, error) {
-	if !strings.HasPrefix(urlString, "http://") && !strings.HasPrefix(urlString, "https://") {
+	if !hasProtocol(urlString) {
 		return parseProxyURL(fmt.Sprintf("https://%s", urlString))
+	} else {
+		return url.Parse(urlString)
 	}
-
-	return url.Parse(urlString)
 }
 
-func proxyLinkURLs(responseBody string, toProxy *url.URL, proxyBase *url.URL) string {
-	rex := regexp.MustCompile(`(src|href|action)\s*=\s*("[^"]+"|'[^']+')`)
-	responseBody = rex.ReplaceAllStringFunc(responseBody, func(match string) string {
-		attribute, value := parseAttribute(match)
-		valueURL, err := url.Parse(value)
-
-		if err != nil {
-			return match
-		}
-
-		resolved := toProxy.ResolveReference(valueURL)
-
-		proxied := proxyBase.Clone()
-
-		query := proxied.Query()
-		query.Add("url", resolved.String())
-		proxied.RawQuery = query.Encode()
-
-		return fmt.Sprintf("%s=\"%s\"", attribute, proxied)
-	})
-	return responseBody
+func hasProtocol(urlString string) bool {
+	return strings.HasPrefix(urlString, "http://") || strings.HasPrefix(urlString, "https://")
 }
 
-func parseAttribute(match string) (string, string) {
-	split := strings.Split(match, "=")
-
-	attribute := strings.TrimSpace(split[0])
-
-	value := strings.TrimSpace(split[1])
-	value = value[1 : len(value)-1]
-
-	return attribute, value
+func buildProxyBase(context *gin.Context) *url.URL {
+	proxyBase, _ := url.Parse(fmt.Sprintf("http://%s/proxy", context.Request.Host))
+	return proxyBase
 }
 
 func applyProxiedHeaders(response *fetcher.Response, context *gin.Context) {
