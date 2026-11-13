@@ -21,7 +21,7 @@ func NewProxyHandler(fetcher *fetcher.Fetcher) *ProxyHandler {
 }
 
 func (handler *ProxyHandler) Handle(context *gin.Context) {
-	if toProxy, err := parseProxyURL(context); err != nil {
+	if toProxy, err := parseProxyURLQuery(context); err != nil {
 		context.String(400, "%s", err)
 	} else if response, err := handler.fetcher.Fetch("GET", toProxy, context.Request.Header); err != nil {
 		context.String(400, "%s", err)
@@ -35,22 +35,21 @@ func (handler *ProxyHandler) Handle(context *gin.Context) {
 	}
 }
 
-func parseProxyURL(context *gin.Context) (*url.URL, error) {
+func parseProxyURLQuery(context *gin.Context) (*url.URL, error) {
 	toProxyString, exists := context.GetQuery("url")
 	if !exists {
 		return nil, fmt.Errorf("No URL supplied")
 	}
 
-	if !strings.HasPrefix(toProxyString, "http://") && !strings.HasPrefix(toProxyString, "https://") {
-		toProxyString = fmt.Sprintf("https://%s", toProxyString)
+	return parseProxyURL(toProxyString)
+}
+
+func parseProxyURL(urlString string) (*url.URL, error) {
+	if !strings.HasPrefix(urlString, "http://") && !strings.HasPrefix(urlString, "https://") {
+		return parseProxyURL(fmt.Sprintf("https://%s", urlString))
 	}
 
-	toProxy, err := url.Parse(toProxyString)
-	if err != nil {
-		return nil, err
-	}
-
-	return toProxy, nil
+	return url.Parse(urlString)
 }
 
 func proxyLinkURLs(responseBody string, toProxy *url.URL, proxyBase *url.URL) string {
