@@ -19,6 +19,14 @@ func (response *Response) Headers() *Headers {
 	return response.headers
 }
 
+func (response *Response) MimeType() string {
+	if mimeType, ok := response.headers.GetFirst("Content-Type"); !ok {
+		return ""
+	} else {
+		return mimeType
+	}
+}
+
 func (response *Response) Body() []byte {
 	return response.body
 }

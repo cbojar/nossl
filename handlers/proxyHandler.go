@@ -27,8 +27,8 @@ func (handler *ProxyHandler) Handle(context *gin.Context) {
 		context.String(400, "%s", err)
 	} else {
 		proxier := relinker.NewURLProxier(buildProxyBase(context))
-		htmlRelinker := relinker.NewHTMLRelinker(proxier)
-		responseBody := htmlRelinker.Relink(toProxy, response.BodyString())
+		responseRelinker := relinker.RelinkerFor(response.MimeType(), proxier)
+		responseBody := responseRelinker.Relink(toProxy, response.BodyString())
 
 		applyProxiedHeaders(response, context)
 		context.String(response.StatusCode(), "%s", responseBody)
