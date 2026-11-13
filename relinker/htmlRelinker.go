@@ -2,6 +2,7 @@ package relinker
 
 import (
 	"fmt"
+	"html"
 	"net/url"
 	"regexp"
 	"strings"
@@ -34,9 +35,13 @@ func (relinker *HTMLRelinker) relinkAttribute(proxiedURL *url.URL, quote rune) f
 		} else {
 			return fmt.Sprintf(
 				"%[2]s=%[1]c%[3]s%[1]c",
-				quote, attribute, relinker.proxier.Proxy(proxiedURL, valueURL))
+				quote, attribute, relinker.proxy(proxiedURL, valueURL))
 		}
 	}
+}
+
+func (relinker *HTMLRelinker) proxy(proxiedURL *url.URL, valueURL *url.URL) string {
+	return html.EscapeString(relinker.proxier.Proxy(proxiedURL, valueURL).String())
 }
 
 func parseAttribute(match string) (string, string) {
@@ -46,6 +51,7 @@ func parseAttribute(match string) (string, string) {
 
 	value = strings.TrimSpace(value)
 	value = value[1 : len(value)-1]
+	value = html.UnescapeString(value)
 
 	return attribute, value
 }
