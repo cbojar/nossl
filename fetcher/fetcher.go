@@ -16,7 +16,7 @@ func NewFetcher() *Fetcher {
 	}
 }
 
-func (fetcher *Fetcher) Fetch(method string, url *url.URL, header http.Header) (int, http.Header, string, error) {
+func (fetcher *Fetcher) Fetch(method string, url *url.URL, header http.Header) (*Response, error) {
 	header.Del("Accept-Encoding") // Prevent getting a compressed response back
 
 	request := &http.Request{
@@ -27,14 +27,16 @@ func (fetcher *Fetcher) Fetch(method string, url *url.URL, header http.Header) (
 
 	response, err := fetcher.client.Do(request)
 	if err != nil {
-		return -1, nil, "", err
+		return nil, err
 	}
 
 	defer response.Body.Close()
 
-	if body, err := io.ReadAll(response.Body); err != nil {
-		return response.StatusCode, response.Header, "", err
-	} else {
-		return response.StatusCode, response.Header, string(body), nil
-	}
+	body, err := io.ReadAll(response.Body)
+	return &Response{
+		statusCode: response.StatusCode,
+		status:     response.Status,
+		headers:    &Headers{headers: response.Header},
+		body:       body,
+	}, err
 }

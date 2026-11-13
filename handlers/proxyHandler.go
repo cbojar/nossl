@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -24,15 +23,15 @@ func NewProxyHandler(fetcher *fetcher.Fetcher) *ProxyHandler {
 func (handler *ProxyHandler) Handle(context *gin.Context) {
 	if toProxy, err := parseProxyURL(context); err != nil {
 		context.String(400, "%s", err)
-	} else if status, responseHeader, responseBody, err := handler.fetcher.Fetch("GET", toProxy, context.Request.Header); err != nil {
+	} else if response, err := handler.fetcher.Fetch("GET", toProxy, context.Request.Header); err != nil {
 		context.String(400, "%s", err)
 	} else {
-		applyProxiedHeaders(responseHeader, context)
+		applyProxiedHeaders(response, context)
 
 		proxyBase, _ := url.Parse(fmt.Sprintf("http://%s/proxy", context.Request.Host))
-		responseBody = proxyLinkURLs(responseBody, toProxy, proxyBase)
+		responseBody := proxyLinkURLs(response.BodyString(), toProxy, proxyBase)
 
-		context.String(status, "%s", responseBody)
+		context.String(response.StatusCode(), "%s", responseBody)
 	}
 }
 
@@ -88,16 +87,10 @@ func parseAttribute(match string) (string, string) {
 	return attribute, value
 }
 
-func applyProxiedHeaders(responseHeader http.Header, context *gin.Context) {
-	for header, values := range responseHeader {
-		if header == "Content-Length" {
-			continue
-		}
-
-		for _, value := range values {
-			context.Writer.Header().Add(header, value)
-		}
-	}
+func applyProxiedHeaders(response *fetcher.Response, context *gin.Context) {
+	response.Headers().EachExcluding(
+		[]string{"Content-Length"},
+		context.Writer.Header().Add)
 
 	context.Writer.Header().Add("Via", "nossl 1.0")
 }
