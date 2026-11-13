@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/cbojar/nossl/fetcher"
 	"github.com/cbojar/nossl/handlers"
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +16,8 @@ func main() {
 	router.RedirectFixedPath = true
 	router.RemoveExtraSlash = true
 
-	proxyHandler := handlers.NewProxyHandler()
+	fetcher := fetcher.NewFetcher()
+	proxyHandler := handlers.NewProxyHandler(fetcher)
 
 	router.GET("/", handlers.RootHandler)
 	router.GET("/proxy", proxyHandler.Handle)

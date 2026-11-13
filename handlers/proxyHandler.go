@@ -2,25 +2,29 @@ package handlers
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 
+	"github.com/cbojar/nossl/fetcher"
 	"github.com/gin-gonic/gin"
 )
 
-type ProxyHandler struct{}
+type ProxyHandler struct {
+	fetcher *fetcher.Fetcher
+}
 
-func NewProxyHandler() *ProxyHandler {
-	return &ProxyHandler{}
+func NewProxyHandler(fetcher *fetcher.Fetcher) *ProxyHandler {
+	return &ProxyHandler{
+		fetcher: fetcher,
+	}
 }
 
 func (handler *ProxyHandler) Handle(context *gin.Context) {
 	if toProxy, err := parseProxyURL(context); err != nil {
 		context.String(400, "%s", err)
-	} else if status, responseHeader, responseBody, err := fetchURL("GET", toProxy, context.Request.Header); err != nil {
+	} else if status, responseHeader, responseBody, err := handler.fetcher.Fetch("GET", toProxy, context.Request.Header); err != nil {
 		context.String(400, "%s", err)
 	} else {
 		applyProxiedHeaders(responseHeader, context)
@@ -48,28 +52,6 @@ func parseProxyURL(context *gin.Context) (*url.URL, error) {
 	}
 
 	return toProxy, nil
-}
-
-func fetchURL(method string, url *url.URL, header http.Header) (int, http.Header, string, error) {
-	header.Del("Accept-Encoding")
-	request := &http.Request{
-		Method: method,
-		URL:    url,
-		Header: header,
-	}
-
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return -1, nil, "", err
-	}
-
-	defer response.Body.Close()
-
-	if body, err := io.ReadAll(response.Body); err != nil {
-		return response.StatusCode, response.Header, "", err
-	} else {
-		return response.StatusCode, response.Header, string(body), nil
-	}
 }
 
 func proxyLinkURLs(responseBody string, toProxy *url.URL, proxyBase *url.URL) string {
