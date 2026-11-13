@@ -11,7 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ProxyHandler(context *gin.Context) {
+type ProxyHandler struct{}
+
+func NewProxyHandler() *ProxyHandler {
+	return &ProxyHandler{}
+}
+
+func (handler *ProxyHandler) Handle(context *gin.Context) {
 	if toProxy, err := parseProxyURL(context); err != nil {
 		context.String(400, "%s", err)
 	} else if status, responseHeader, responseBody, err := fetchURL("GET", toProxy, context.Request.Header); err != nil {

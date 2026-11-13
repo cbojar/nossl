@@ -15,8 +15,10 @@ func main() {
 	router.RedirectFixedPath = true
 	router.RemoveExtraSlash = true
 
+	proxyHandler := handlers.NewProxyHandler()
+
 	router.GET("/", handlers.RootHandler)
-	router.GET("/proxy", handlers.ProxyHandler)
+	router.GET("/proxy", proxyHandler.Handle)
 
 	router.Run("0.0.0.0:61212")
 }
