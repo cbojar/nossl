@@ -40,11 +40,11 @@ func (relinker *HTMLRelinker) relinkAttribute(proxiedURL *url.URL, quote rune) f
 }
 
 func parseAttribute(match string) (string, string) {
-	split := strings.Split(match, "=")
+	attribute, value, _ := strings.Cut(match, "=")
 
-	attribute := strings.TrimSpace(split[0])
+	attribute = strings.TrimSpace(attribute)
 
-	value := strings.TrimSpace(split[1])
+	value = strings.TrimSpace(value)
 	value = value[1 : len(value)-1]
 
 	return attribute, value
