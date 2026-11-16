@@ -12,7 +12,11 @@ func RelinkerFor(mimeType string, proxier *URLProxier) Relinker {
 	switch mimeType {
 	case "text/css":
 		return NewCSSRelinker(proxier)
-	default:
+	case "text/javascript", "application/javascript":
+		return NewJSRelinker(proxier)
+	case "text/html":
 		return NewHTMLRelinker(proxier)
+	default:
+		return NewNoopRelinker()
 	}
 }
