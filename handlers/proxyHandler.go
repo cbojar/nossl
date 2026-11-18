@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"maps"
 	"net/url"
 	"strings"
 
@@ -36,23 +37,31 @@ func (handler *ProxyHandler) Handle(context *gin.Context) {
 }
 
 func parseProxyURLQuery(context *gin.Context) (*url.URL, error) {
-	if queryURL, exists := context.GetQuery("url"); !exists {
+	requestQuery := context.Request.URL.Query().Clone()
+	if queryURL := context.Query("url"); len(queryURL) == 0 {
 		return nil, fmt.Errorf("No URL supplied")
+	} else if strings.HasPrefix(queryURL, "http://") {
+		return buildURL("http", strings.TrimPrefix(queryURL, "http://"), requestQuery)
+	} else if strings.HasPrefix(queryURL, "https://") {
+		return buildURL("https", strings.TrimPrefix(queryURL, "https://"), requestQuery)
+	} else if queryProto := context.Query("proto"); len(queryProto) > 0 {
+		return buildURL(queryProto, queryURL, requestQuery)
 	} else {
-		return parseProxyURL(queryURL)
+		return buildURL("https", queryURL, requestQuery)
 	}
 }
 
-func parseProxyURL(urlString string) (*url.URL, error) {
-	if !hasProtocol(urlString) {
-		return parseProxyURL(fmt.Sprintf("https://%s", urlString))
+func buildURL(proto string, urlString string, query url.Values) (*url.URL, error) {
+	if parsed, err := url.Parse(fmt.Sprintf("%s://%s", proto, urlString)); err != nil {
+		return nil, err
 	} else {
-		return url.Parse(urlString)
+		query.Del("url")
+		query.Del("proto")
+		parsedQuery := parsed.Query()
+		maps.Insert(parsedQuery, maps.All(query))
+		parsed.RawQuery = parsedQuery.Encode()
+		return parsed, nil
 	}
-}
-
-func hasProtocol(urlString string) bool {
-	return strings.HasPrefix(urlString, "http://") || strings.HasPrefix(urlString, "https://")
 }
 
 func buildProxyBase(context *gin.Context) *url.URL {

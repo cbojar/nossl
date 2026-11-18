@@ -15,8 +15,13 @@ func RootHandler(context *gin.Context) {
 		<body>
 				<h1>NoSSL Proxy</h1>
 				<form action="/proxy" method="GET">
-				<label for="url">URL:</label> <input type="text" name="url" id="url"/>
-				<input type="submit"/>
+				<label for="url">URL:</label>
+				<select name="proto" id="proto">
+					<option value="https">https://</option>
+					<option value="http">http://</option>
+				</select>
+				<input type="text" name="url" id="url"/>
+				<input type="submit" value="Go"/>
 				</form>
 		</body>
 	</html>`)
