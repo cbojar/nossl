@@ -1,5 +1,7 @@
 package fetcher
 
+import "strings"
+
 type Response struct {
 	statusCode int
 	status     string
@@ -23,7 +25,8 @@ func (response *Response) MimeType() string {
 	if mimeType, ok := response.headers.GetFirst("Content-Type"); !ok {
 		return ""
 	} else {
-		return mimeType
+		mimeTypeOnly, _, _ := strings.Cut(mimeType, ";")
+		return mimeTypeOnly
 	}
 }
 
